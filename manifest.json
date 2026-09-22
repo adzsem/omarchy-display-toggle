@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.adzsem.display-toggle",
+  "name": "Display Toggle",
+  "version": "1.0.0",
+  "author": "Adam Semmakie",
+  "description": "An Omarchy Display panel with explicit checkboxes for enabling and disabling monitors.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Display Toggle",
+    "description": "Manage brightness, scale, text size, and connected displays from the bar.",
+    "category": "System",
+    "defaultSection": "right",
+    "allowMultiple": false
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.monitor"
+  }
+}
