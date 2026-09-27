@@ -7,20 +7,46 @@ set -u
 no_osd=0
 monitor=""
 map_only=""
+watch_gamma=0
+watch_once=0
 
 while (( $# > 0 )); do
   case "$1" in
     --no-osd) no_osd=1; shift ;;
     --monitor) (( $# >= 2 )) || exit 1; monitor="$2"; shift 2 ;;
     --map) (( $# >= 2 )) || exit 1; map_only="$2"; shift 2 ;;
+    --watch-gamma) watch_gamma=1; shift ;;
+    --watch-gamma-once) watch_gamma=1; watch_once=1; shift ;;
     *) break ;;
   esac
 done
 
+state_root="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/brightness-extra-dark"
+desired_gamma_file="$state_root/desired-gamma"
+self="$(readlink -f -- "${BASH_SOURCE[0]}")"
+
+enforce_gamma() {
+  local desired current
+  [[ -r $desired_gamma_file ]] || return 0
+  IFS= read -r desired <"$desired_gamma_file"
+  [[ $desired =~ ^[0-9]+$ ]] || return 0
+  current="$(hyprctl hyprsunset gamma 2>/dev/null | grep -oE '[0-9]+' | head -n1 || true)"
+  if [[ $current != "$desired" ]]; then
+    hyprctl hyprsunset gamma "$desired" >/dev/null 2>&1 || true
+  fi
+}
+
+if (( watch_gamma )); then
+  while :; do
+    enforce_gamma
+    (( watch_once )) && exit 0
+    sleep 2
+  done
+fi
+
 [[ -n $monitor ]] || monitor="$(omarchy-hyprland-monitor-focused 2>/dev/null || true)"
 [[ -n $monitor ]] || exit 1
 
-state_root="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/brightness-extra-dark"
 state_file="$state_root/${monitor//\//_}"
 
 clamp() {
@@ -76,5 +102,19 @@ fi
 
 mkdir -p "$state_root"
 printf '%s\n' "$logical" >"$state_file"
+printf '%s\n' "$gamma" >"$desired_gamma_file.tmp"
+mv -f -- "$desired_gamma_file.tmp" "$desired_gamma_file"
+
+# hyprsunset profiles and other desktop controls can reset gamma after this
+# command succeeds. Keep the slider's requested gamma authoritative for the
+# rest of the graphical session, without repeatedly writing when it matches.
+if ! systemctl --user is-active --quiet omarchy-display-toggle-gamma.service 2>/dev/null; then
+  if ! systemd-run --user --unit=omarchy-display-toggle-gamma --collect \
+    --property=Restart=on-failure --property=RestartSec=1 \
+    "$self" --watch-gamma >/dev/null 2>&1; then
+    nohup "$self" --watch-gamma >/dev/null 2>&1 &
+  fi
+fi
+
 (( no_osd )) || omarchy-osd -i brightness -p "$logical"
 printf '%s\n' "$logical"

@@ -51,7 +51,7 @@ The slider is split into two ranges:
 - 1–20: hardware brightness stays at 1%, while `hyprsunset` gamma moves from 5% to 100%
 - 21–100: gamma stays at 100%, while hardware brightness moves from 2% to 100%
 
-Brightness state is stored per connector under `~/.local/state/omarchy/brightness-extra-dark/`. Because Hyprland gamma is compositor-wide, values below 20 dim all monitors together even though hardware brightness targets the focused display.
+Brightness state is stored per connector under `~/.local/state/omarchy/brightness-extra-dark/`. Because Hyprland gamma is compositor-wide, values below 20 dim all monitors together even though hardware brightness targets the focused display. A lightweight per-session watcher restores the selected gamma if a night-light profile or another desktop control resets it.
 
 ## Safety
 
@@ -66,6 +66,7 @@ Validate a checkout with:
 ```bash
 omarchy plugin validate .
 tests/test-mapping.sh
+tests/test-persistence.sh
 ```
 
 The panel is derived from Omarchy's built-in `omarchy.monitor` plugin and retains its canonical IPC identity for compatibility with the existing Display shortcut.
