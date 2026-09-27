@@ -29,6 +29,8 @@ Panel {
   property string monitorScale: ""
   property var displays: []
   property int enabledDisplayCount: 0
+  readonly property string brightnessHelper: Qt.resolvedUrl("bin/omarchy-brightness-extra-dark").toString().replace(/^file:\/\//, "")
+  readonly property string monitorStateHelper: Qt.resolvedUrl("bin/omarchy-monitor-state-extra-dark").toString().replace(/^file:\/\//, "")
 
   // Carry sub-notch touchpad deltas between wheel events.
   property real wheelAccumulator: 0
@@ -247,7 +249,7 @@ Panel {
     }
 
     root.brightnessSetQueued = false
-    setBrightnessProc.command = ["omarchy-brightness-display", "--no-osd", "--monitor", root.focusedMonitor, percent + "%"]
+    setBrightnessProc.command = [root.brightnessHelper, "--no-osd", "--monitor", root.focusedMonitor, percent + "%"]
     setBrightnessProc.running = true
   }
 
@@ -399,7 +401,7 @@ Panel {
 
   Process {
     id: stateProc
-    command: ["omarchy-monitor-state"]
+    command: [root.monitorStateHelper]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {

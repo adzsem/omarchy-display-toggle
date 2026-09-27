@@ -1,0 +1,80 @@
+#!/bin/bash
+set -u
+
+# Extend Omarchy's 1-100 brightness range with software dimming.
+# Logical 1-20: hardware stays at 1%, hyprsunset gamma spans 5-100%.
+# Logical 21-100: gamma stays at 100%, hardware spans 2-100%.
+no_osd=0
+monitor=""
+map_only=""
+
+while (( $# > 0 )); do
+  case "$1" in
+    --no-osd) no_osd=1; shift ;;
+    --monitor) (( $# >= 2 )) || exit 1; monitor="$2"; shift 2 ;;
+    --map) (( $# >= 2 )) || exit 1; map_only="$2"; shift 2 ;;
+    *) break ;;
+  esac
+done
+
+[[ -n $monitor ]] || monitor="$(omarchy-hyprland-monitor-focused 2>/dev/null || true)"
+[[ -n $monitor ]] || exit 1
+
+state_root="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/brightness-extra-dark"
+state_file="$state_root/${monitor//\//_}"
+
+clamp() {
+  local n="${1%%%}"
+  [[ $n =~ ^[0-9]+$ ]] || return 1
+  (( n < 1 )) && n=1
+  (( n > 100 )) && n=100
+  printf '%s\n' "$n"
+}
+
+map_values() {
+  local logical=$1 hardware gamma
+  if (( logical <= 20 )); then
+    hardware=1
+    gamma=$(( 5 + (logical - 1) * 95 / 19 ))
+  else
+    gamma=100
+    hardware=$(( 1 + (logical - 20) * 99 / 80 ))
+  fi
+  printf '%s %s\n' "$hardware" "$gamma"
+}
+
+if [[ -n $map_only ]]; then
+  logical="$(clamp "$map_only")" || exit 1
+  map_values "$logical"
+  exit
+fi
+
+if (( $# == 0 )); then
+  if [[ -r $state_file ]]; then
+    IFS= read -r saved <"$state_file"
+    if logical="$(clamp "$saved")"; then
+      printf '%s\n' "$logical"
+      exit
+    fi
+  fi
+  omarchy-brightness-display --monitor "$monitor"
+  exit
+fi
+
+logical="$(clamp "$1")" || exit 1
+read -r hardware gamma < <(map_values "$logical")
+
+# Restore software gamma before increasing physical light; dim physical light
+# before applying extra gamma. This avoids a bright flash at the crossover.
+if (( gamma == 100 )); then
+  hyprctl hyprsunset gamma 100 >/dev/null 2>&1 || exit 1
+  omarchy-brightness-display --no-osd --monitor "$monitor" "$hardware%" || exit 1
+else
+  omarchy-brightness-display --no-osd --monitor "$monitor" "$hardware%" || exit 1
+  hyprctl hyprsunset gamma "$gamma" >/dev/null 2>&1 || exit 1
+fi
+
+mkdir -p "$state_root"
+printf '%s\n' "$logical" >"$state_file"
+(( no_osd )) || omarchy-osd -i brightness -p "$logical"
+printf '%s\n' "$logical"

@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "io.github.adzsem.display-toggle",
   "name": "Display Toggle",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Adam Semmakie",
-  "description": "An Omarchy Display panel with explicit checkboxes for enabling and disabling monitors.",
+  "description": "An Omarchy Display panel with monitor toggles and an extra-dark brightness range.",
   "kinds": [
     "bar-widget"
   ],
@@ -13,7 +13,7 @@
   },
   "barWidget": {
     "displayName": "Display Toggle",
-    "description": "Manage brightness, scale, text size, and connected displays from the bar.",
+    "description": "Manage extra-dark brightness, scale, text size, and connected displays from the bar.",
     "category": "System",
     "defaultSection": "right",
     "allowMultiple": false
